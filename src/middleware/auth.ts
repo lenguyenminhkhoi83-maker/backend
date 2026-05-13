@@ -22,6 +22,8 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
     let token: string | undefined;
 
     // Check for token in Authorization header
+    console.log('HEADER:', req.headers.authorization);
+    console.log('JWT_SECRET:', process.env.JWT_SECRET);
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     }
@@ -37,6 +39,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
     try {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+      console.log(decoded);
 
       // Get user from token
       const user = await User.findById(decoded.id);

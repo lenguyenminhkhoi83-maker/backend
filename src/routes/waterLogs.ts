@@ -80,6 +80,7 @@ router.post('/', [
     .isInt({ min: 1, max: 2000 })
     .withMessage('Amount must be between 1 and 2000ml'),
   body('date')
+    .optional()
     .isISO8601()
     .withMessage('Date must be in YYYY-MM-DD format'),
   body('timestamp')
@@ -98,7 +99,8 @@ router.post('/', [
       });
     }
 
-    const { amount, date, timestamp } = req.body;
+    const { amount, date = new Date().toISOString().split('T')[0], timestamp } = req.body;
+    console.log(req.body);
     const userId = req.user!._id;
 
     // Create water log

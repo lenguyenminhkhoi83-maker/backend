@@ -29,12 +29,15 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
       }
 
       const data = await response.json();
+      console.log('Login response:', data);
+      console.log('Login nested token:', data?.data?.token);
 
       if (!response.ok) {
         throw new Error(data.message || data.error || 'Login failed');
       }
 
-      localStorage.setItem('token', data.token);
+      const token = data.token || data.data?.token;
+      localStorage.setItem('token', token);
       console.log('Login success:', data);
       onNavigate('/dashboard');
     } catch (err: any) {

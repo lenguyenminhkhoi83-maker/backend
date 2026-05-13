@@ -3,13 +3,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const dotenv_1 = __importDefault(require("dotenv"));
+dotenv_1.default.config();
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const compression_1 = __importDefault(require("compression"));
 const morgan_1 = __importDefault(require("morgan"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
-const dotenv_1 = __importDefault(require("dotenv"));
 const database_1 = require("./config/database");
 const errorHandler_1 = require("./middleware/errorHandler");
 const notFound_1 = require("./middleware/notFound");
@@ -21,8 +22,6 @@ const profile_1 = __importDefault(require("./routes/profile"));
 const sync_1 = __importDefault(require("./routes/sync"));
 const push_1 = __importDefault(require("./routes/push"));
 const notifications_1 = __importDefault(require("./routes/notifications"));
-// Load environment variables
-dotenv_1.default.config();
 // Create Express app
 const app = (0, express_1.default)();
 // Connect to database

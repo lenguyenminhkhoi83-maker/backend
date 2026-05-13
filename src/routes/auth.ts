@@ -9,7 +9,7 @@ const router = express.Router();
 // @route   POST /api/auth/register
 // @access  Public
 router.post('/register', [
-  body('Khoi')
+  body('name')
     .trim()
     .isLength({ min: 2, max: 50 })
     .withMessage('Name must be between 2 and 50 characters'),

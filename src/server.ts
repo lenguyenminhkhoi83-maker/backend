@@ -1,10 +1,14 @@
+
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
 
 import { connectDB } from './config/database';
 import { errorHandler } from './middleware/errorHandler';
@@ -18,9 +22,6 @@ import profileRoutes from './routes/profile';
 import syncRoutes from './routes/sync';
 import pushRoutes from './routes/push';
 import notificationsRoutes from './routes/notifications';
-
-// Load environment variables
-dotenv.config();
 
 // Create Express app
 const app = express();

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { authHeaders } from './api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -7,56 +8,97 @@ export default function Dashboard() {
   const [total, setTotal] = useState(0);
   const [goal, setGoal] = useState(2000);
 
-  const token = localStorage.getItem('token') || '';
-
-  if (!token) {
-    window.location.href = '/login';
-  }
-
   const fetchLogs = async () => {
-    const res = await fetch(`${API_URL}/api/water-logs`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    try {
+      const token = localStorage.getItem('token');
 
-    const data = await res.json();
-    const logsData = data?.data || [];
-    setLogs(logsData);
+      if (!token) {
+        logout();
+        return;
+      }
 
-    const today = new Date().toDateString();
+      const res = await fetch(`${API_URL}/api/water-logs`, {
+        headers: authHeaders(),
+      });
 
-    const todayLogs = logsData.filter(
-      (log: any) =>
-        new Date(log.createdAt || log.timestamp).toDateString() === today
-    );
+      if (res.status === 401) {
+        logout();
+        return;
+      }
 
-    const sum = todayLogs.reduce(
-      (acc: number, log: any) => acc + (log.amount || 0),
-      0
-    );
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
 
-    setTotal(sum);
+      const data = await res.json();
+
+      const logsData = data?.data || [];
+
+      setLogs(logsData);
+
+      const today = new Date().toDateString();
+
+      const todayLogs = logsData.filter(
+        (log: any) =>
+          new Date(log.createdAt || log.timestamp).toDateString() === today
+      );
+
+      const sum = todayLogs.reduce(
+        (acc: number, log: any) => acc + (log.amount || 0),
+        0
+      );
+
+      setTotal(sum);
+    } catch (error) {
+      console.error('Failed to fetch logs:', error);
+    }
   };
 
   const fetchGoal = async () => {
-    const res = await fetch(`${API_URL}/api/settings`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    try {
+      const token = localStorage.getItem('token');
 
-    const data = await res.json();
-    setGoal(data?.data?.dailyGoal || 2000);
+      if (!token) {
+        logout();
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/api/settings`, {
+        headers: authHeaders(),
+      });
+
+      if (res.status === 401) {
+        logout();
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      setGoal(data?.data?.dailyGoal || 2000);
+    } catch (error) {
+      console.error('Failed to fetch goal:', error);
+    }
   };
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      window.location.href = '/login';
+      return;
+    }
+
     fetchLogs();
     fetchGoal();
   }, []);
 
   const addWater = async (amount: number) => {
-    await fetch(`${API_URL}/api/water-logs`, {
+    const token = localStorage.getItem('token');
+
+    const res = await fetch(`${API_URL}/api/water-logs`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -64,6 +106,15 @@ export default function Dashboard() {
       },
       body: JSON.stringify({ amount }),
     });
+
+    const data = await res.json();
+
+    console.log(data);
+
+    if (!res.ok) {
+      console.error(data);
+      return;
+    }
 
     fetchLogs();
   };
