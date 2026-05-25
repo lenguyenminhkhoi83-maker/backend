@@ -37,11 +37,27 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// CORS configuration
-app.use(cors({
-  origin: true,
+// CORS configuration (use env var `CORS_ORIGIN` to list allowed origins, comma-separated)
+const allowedOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()) : [];
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // allow non-browser clients (Postman, curl)
+    if (allowedOrigins.length === 0) {
+      // During development, allow localhost origins if no env var is set
+      if (process.env.NODE_ENV === 'development' && /^https?:\/\/localhost(:\d+)?$/.test(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('CORS not configured'));
+    }
+    return allowedOrigins.includes(origin) ? callback(null, true) : callback(new Error('CORS not allowed'));
+  },
   credentials: true,
-}));
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({
