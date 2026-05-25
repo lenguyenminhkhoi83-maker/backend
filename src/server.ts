@@ -39,10 +39,7 @@ app.use(helmet({
 
 // CORS configuration
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'https://hydrotrack-eosin.vercel.app'
-  ],
+  origin: true,
   credentials: true,
 }));
 
