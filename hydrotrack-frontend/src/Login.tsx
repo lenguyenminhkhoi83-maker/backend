@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import API from './api';
 
 type LoginProps = {
   onNavigate: (path: string) => void;
@@ -16,29 +15,15 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
+      const res = await API.post('/auth/login', {
+        email,
+        password,
       });
 
-      if (!response) {
-        throw new Error('No response from server');
-      }
-
-      const data = await response.json();
-      console.log('Login response:', data);
-      console.log('Login nested token:', data?.data?.token);
-
-      if (!response.ok) {
-        throw new Error(data.message || data.error || 'Login failed');
-      }
-
-      const token = data.token || data.data?.token;
-      localStorage.setItem('token', token);
-      console.log('Login success:', data);
+      localStorage.setItem(
+  "token",
+  res.data.data.token
+);
       onNavigate('/dashboard');
     } catch (err: any) {
       console.error('LOGIN ERROR:', err);
@@ -60,7 +45,7 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
           <input
             id="email"
             type="email"
-            placeholder="you@example.com"
+            placeholder="user@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required

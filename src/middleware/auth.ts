@@ -22,8 +22,6 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
     let token: string | undefined;
 
     // Check for token in Authorization header
-    console.log('HEADER:', req.headers.authorization);
-    console.log('JWT_SECRET:', process.env.JWT_SECRET);
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     }
@@ -36,10 +34,17 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
       return;
     }
 
+    if (!process.env.JWT_SECRET) {
+      res.status(500).json({
+        success: false,
+        error: 'Server configuration error'
+      });
+      return;
+    }
+
     try {
       // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
-      console.log(decoded);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET) as JwtPayload;
 
       // Get user from token
       const user = await User.findById(decoded.id);
@@ -69,7 +74,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
   }
 };
 
-// Grant access to specific roles (for future use)
+// Grant access to specific roles
 export const authorize = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
@@ -80,8 +85,18 @@ export const authorize = (...roles: string[]) => {
       return;
     }
 
-    // For now, all authenticated users have access
-    // In the future, we could add role-based access control
+    const userRole = req.user.role || 'user';
+    if (!roles.includes(userRole)) {
+      res.status(403).json({
+        success: false,
+        error: 'Forbidden: insufficient permissions'
+      });
+      return;
+    }
+
     next();
   };
 };
+
+export const adminOnly = authorize('admin');
+export const userOnly = authorize('user');

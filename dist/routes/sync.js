@@ -8,6 +8,7 @@ const express_validator_1 = require("express-validator");
 const WaterLog_1 = __importDefault(require("../models/WaterLog"));
 const Settings_1 = __importDefault(require("../models/Settings"));
 const auth_1 = require("../middleware/auth");
+const asyncHandler_1 = require("../middleware/asyncHandler");
 const router = express_1.default.Router();
 // All routes require authentication
 router.use(auth_1.protect);
@@ -117,29 +118,24 @@ router.post('/', [
 // @desc    Get data for client sync
 // @route   GET /api/sync
 // @access  Private
-router.get('/', async (req, res, next) => {
-    try {
-        const userId = req.user._id;
-        const { since } = req.query;
-        let query = { user: userId };
-        // If since parameter is provided, only get data after that timestamp
-        if (since) {
-            query.timestamp = { $gt: new Date(since) };
+router.get('/', (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    const userId = req.user._id;
+    const { since } = req.query;
+    let query = { user: userId };
+    // If since parameter is provided, only get data after that timestamp
+    if (since) {
+        query.timestamp = { $gt: new Date(since) };
+    }
+    const waterLogs = await WaterLog_1.default.find(query).sort({ timestamp: -1 });
+    const settings = await Settings_1.default.getUserSettings(userId.toString());
+    res.json({
+        success: true,
+        data: {
+            waterLogs,
+            settings,
+            serverTimestamp: new Date().toISOString()
         }
-        const waterLogs = await WaterLog_1.default.find(query).sort({ timestamp: -1 });
-        const settings = await Settings_1.default.getUserSettings(userId.toString());
-        res.json({
-            success: true,
-            data: {
-                waterLogs,
-                settings,
-                serverTimestamp: new Date().toISOString()
-            }
-        });
-    }
-    catch (error) {
-        next(error);
-    }
-});
+    });
+}));
 exports.default = router;
 //# sourceMappingURL=sync.js.map

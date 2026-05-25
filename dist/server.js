@@ -11,6 +11,8 @@ const helmet_1 = __importDefault(require("helmet"));
 const compression_1 = __importDefault(require("compression"));
 const morgan_1 = __importDefault(require("morgan"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
+const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
+const swagger_jsdoc_1 = __importDefault(require("swagger-jsdoc"));
 const database_1 = require("./config/database");
 const errorHandler_1 = require("./middleware/errorHandler");
 const notFound_1 = require("./middleware/notFound");
@@ -24,6 +26,7 @@ const push_1 = __importDefault(require("./routes/push"));
 const notifications_1 = __importDefault(require("./routes/notifications"));
 // Create Express app
 const app = (0, express_1.default)();
+app.set('trust proxy', 1);
 // Connect to database
 (0, database_1.connectDB)();
 // Security middleware
@@ -54,6 +57,33 @@ app.use(express_1.default.json({ limit: '10mb' }));
 app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
 // Compression middleware
 app.use((0, compression_1.default)());
+// Request ID middleware
+app.use(async (req, res, next) => {
+    const { v4: uuidv4 } = await import('uuid');
+    req.id = uuidv4();
+    res.setHeader('X-Request-Id', req.id);
+    next();
+});
+// Swagger setup
+const swaggerOptions = {
+    definition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'HydroTrack API',
+            version: '1.0.0',
+            description: 'API documentation for the HydroTrack backend'
+        },
+        servers: [
+            {
+                url: 'http://localhost:' + (process.env.PORT || 3000),
+                description: 'Local development server'
+            }
+        ]
+    },
+    apis: ['./src/routes/*.ts']
+};
+const swaggerSpec = (0, swagger_jsdoc_1.default)(swaggerOptions);
+app.use('/api/docs', swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swaggerSpec));
 // Logging middleware
 if (process.env.NODE_ENV === 'development') {
     app.use((0, morgan_1.default)('dev'));
@@ -61,6 +91,10 @@ if (process.env.NODE_ENV === 'development') {
 else {
     app.use((0, morgan_1.default)('combined'));
 }
+// Favicon handler
+app.get('/favicon.ico', (req, res) => {
+    res.status(204).end();
+});
 // Root API endpoint
 app.get('/', (req, res) => {
     res.send('API is running...');
@@ -75,8 +109,8 @@ app.get('/health', (req, res) => {
     });
 });
 // API routes
-app.use('/api/auth', auth_1.default);
-app.use('/api/water-logs', waterLogs_1.default);
+app.use(['/api/auth', '/api/v1/auth'], auth_1.default);
+app.use(['/api/water-logs', '/api/v1/water-logs'], waterLogs_1.default);
 app.use('/api/settings', settings_1.default);
 app.use('/api/profile', profile_1.default);
 app.use('/api/sync', sync_1.default);

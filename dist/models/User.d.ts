@@ -3,6 +3,7 @@ export interface IUser extends Document {
     name: string;
     email: string;
     password: string;
+    role: 'user' | 'admin';
     dailyGoal: number;
     createdAt: Date;
     updatedAt: Date;

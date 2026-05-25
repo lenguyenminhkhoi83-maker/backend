@@ -34,7 +34,12 @@
     "mongodb": "^7.2.0",
     "mongoose": "^7.5.0",
     "morgan": "^1.10.0",
-    "web-push": "^3.6.5"
+    "recharts": "^3.8.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^14.0.0",
+    "web-push": "^3.6.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.4",

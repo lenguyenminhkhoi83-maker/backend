@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
 import Settings from '../models/Settings';
 import { protect } from '../middleware/auth';
+import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = express.Router();
 
@@ -11,19 +12,15 @@ router.use(protect);
 // @desc    Get user settings
 // @route   GET /api/settings
 // @access  Private
-router.get('/', async (req, res, next) => {
-  try {
-    const userId = req.user!._id;
-    const settings = await Settings.getUserSettings(userId.toString());
+router.get('/', asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!._id;
+  const settings = await Settings.getUserSettings(userId.toString());
 
-    res.json({
-      success: true,
-      data: settings
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+  res.json({
+    success: true,
+    data: settings
+  });
+}));
 
 // @desc    Update user settings
 // @route   PUT /api/settings

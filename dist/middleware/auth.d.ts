@@ -9,4 +9,6 @@ declare global {
 }
 export declare const protect: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 export declare const authorize: (...roles: string[]) => (req: Request, res: Response, next: NextFunction) => void;
+export declare const adminOnly: (req: Request, res: Response, next: NextFunction) => void;
+export declare const userOnly: (req: Request, res: Response, next: NextFunction) => void;
 //# sourceMappingURL=auth.d.ts.map

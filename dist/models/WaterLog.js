@@ -63,6 +63,7 @@ const WaterLogSchema = new mongoose_1.Schema({
 });
 // Indexes for better query performance
 WaterLogSchema.index({ user: 1, date: 1 });
+WaterLogSchema.index({ user: 1, date: -1 });
 WaterLogSchema.index({ user: 1, timestamp: -1 });
 WaterLogSchema.index({ date: 1 });
 // Virtual for formatted time

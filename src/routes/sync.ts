@@ -3,6 +3,7 @@ import { body, validationResult } from 'express-validator';
 import WaterLog from '../models/WaterLog';
 import Settings from '../models/Settings';
 import { protect } from '../middleware/auth';
+import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = express.Router();
 
@@ -124,32 +125,28 @@ router.post('/', [
 // @desc    Get data for client sync
 // @route   GET /api/sync
 // @access  Private
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.user!._id;
-    const { since } = req.query;
+router.get('/', asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!._id;
+  const { since } = req.query;
 
-    let query: any = { user: userId };
+  let query: any = { user: userId };
 
-    // If since parameter is provided, only get data after that timestamp
-    if (since) {
-      query.timestamp = { $gt: new Date(since as string) };
-    }
-
-    const waterLogs = await WaterLog.find(query).sort({ timestamp: -1 });
-    const settings = await Settings.getUserSettings(userId.toString());
-
-    res.json({
-      success: true,
-      data: {
-        waterLogs,
-        settings,
-        serverTimestamp: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    next(error);
+  // If since parameter is provided, only get data after that timestamp
+  if (since) {
+    query.timestamp = { $gt: new Date(since as string) };
   }
-});
+
+  const waterLogs = await WaterLog.find(query).sort({ timestamp: -1 });
+  const settings = await Settings.getUserSettings(userId.toString());
+
+  res.json({
+    success: true,
+    data: {
+      waterLogs,
+      settings,
+      serverTimestamp: new Date().toISOString()
+    }
+  });
+}));
 
 export default router;

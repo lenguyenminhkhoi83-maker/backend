@@ -7,25 +7,21 @@ const express_1 = __importDefault(require("express"));
 const express_validator_1 = require("express-validator");
 const Settings_1 = __importDefault(require("../models/Settings"));
 const auth_1 = require("../middleware/auth");
+const asyncHandler_1 = require("../middleware/asyncHandler");
 const router = express_1.default.Router();
 // All routes require authentication
 router.use(auth_1.protect);
 // @desc    Get user settings
 // @route   GET /api/settings
 // @access  Private
-router.get('/', async (req, res, next) => {
-    try {
-        const userId = req.user._id;
-        const settings = await Settings_1.default.getUserSettings(userId.toString());
-        res.json({
-            success: true,
-            data: settings
-        });
-    }
-    catch (error) {
-        next(error);
-    }
-});
+router.get('/', (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    const userId = req.user._id;
+    const settings = await Settings_1.default.getUserSettings(userId.toString());
+    res.json({
+        success: true,
+        data: settings
+    });
+}));
 // @desc    Update user settings
 // @route   PUT /api/settings
 // @access  Private

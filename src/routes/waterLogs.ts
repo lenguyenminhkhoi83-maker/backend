@@ -2,11 +2,63 @@ import express, { Request, Response, NextFunction } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import WaterLog from '../models/WaterLog';
 import { protect } from '../middleware/auth';
+import {
+  getDailyStats,
+  getWeeklyStats
+} from '../controllers/statsController';
 
 const router = express.Router();
 
+const getWaterLogById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: errors.array()
+      });
+      return;
+    }
+
+    const waterLog = await WaterLog.findOne({
+      _id: req.params.id,
+      user: req.user!._id
+    });
+
+    if (!waterLog) {
+      res.status(404).json({
+        success: false,
+        error: 'Water log not found'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: waterLog
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // All routes require authentication
 router.use(protect);
+
+// @desc    Get water log statistics
+// @route   GET /api/water-logs/stats
+// @access  Private
+router.get('/stats', protect, getDailyStats);
+
+// @desc    Get weekly statistics
+// @route   GET /api/water-logs/stats/weekly
+// @access  Private
+router.get('/stats/weekly', protect, getWeeklyStats);
 
 // @desc    Get water logs for a user
 // @route   GET /api/water-logs
@@ -120,47 +172,6 @@ router.post('/', [
   }
 });
 
-// @desc    Get weekly statistics
-// @route   GET /api/water-logs/weekly/stats
-// @access  Private
-router.get('/weekly/stats', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.user!._id;
-
-    // Get date 6 days ago to get 7 days of data
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 6);
-
-    const startDateStr = startDate.toISOString().split('T')[0];
-    const endDateStr = endDate.toISOString().split('T')[0];
-
-    const weeklyStats = await WaterLog.getWeeklyStats(userId.toString(), startDateStr, endDateStr);
-
-    // Fill in missing dates with zero values
-    const filledStats = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-
-      const existingStat = weeklyStats.find((stat: any) => stat.date === dateStr);
-      filledStats.push({
-        date: dateStr,
-        total: existingStat ? existingStat.total : 0,
-        count: existingStat ? existingStat.count : 0
-      });
-    }
-
-    res.json({
-      success: true,
-      data: filledStats
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
 // @desc    Get single water log
 // @route   GET /api/water-logs/:id
 // @access  Private
@@ -168,38 +179,7 @@ router.get('/:id', [
   param('id')
     .isMongoId()
     .withMessage('Invalid water log ID')
-], async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        details: errors.array()
-      });
-    }
-
-    const waterLog = await WaterLog.findOne({
-      _id: req.params.id,
-      user: req.user!._id
-    });
-
-    if (!waterLog) {
-      return res.status(404).json({
-        success: false,
-        error: 'Water log not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: waterLog
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+], protect, getWaterLogById);
 
 // @desc    Update water log
 // @route   PUT /api/water-logs/:id

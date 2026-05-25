@@ -62,6 +62,12 @@ const UserSchema = new mongoose_1.Schema({
         minlength: [6, 'Password must be at least 6 characters'],
         select: false // Don't include password in queries by default
     },
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user',
+        required: true
+    },
     dailyGoal: {
         type: Number,
         default: 2000,
@@ -81,9 +87,8 @@ UserSchema.pre('save', async function (next) {
     if (!this.isModified('password'))
         return next();
     try {
-        // Hash password with cost of 12
-        const salt = await bcryptjs_1.default.genSalt(12);
-        this.password = await bcryptjs_1.default.hash(this.password, salt);
+        // Hash password with a cost factor of 10
+        this.password = await bcryptjs_1.default.hash(this.password, 10);
         next();
     }
     catch (error) {

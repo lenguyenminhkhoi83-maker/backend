@@ -7,9 +7,49 @@ const express_1 = __importDefault(require("express"));
 const express_validator_1 = require("express-validator");
 const WaterLog_1 = __importDefault(require("../models/WaterLog"));
 const auth_1 = require("../middleware/auth");
+const statsController_1 = require("../controllers/statsController");
 const router = express_1.default.Router();
+const getWaterLogById = async (req, res, next) => {
+    try {
+        const errors = (0, express_validator_1.validationResult)(req);
+        if (!errors.isEmpty()) {
+            res.status(400).json({
+                success: false,
+                error: 'Validation failed',
+                details: errors.array()
+            });
+            return;
+        }
+        const waterLog = await WaterLog_1.default.findOne({
+            _id: req.params.id,
+            user: req.user._id
+        });
+        if (!waterLog) {
+            res.status(404).json({
+                success: false,
+                error: 'Water log not found'
+            });
+            return;
+        }
+        res.json({
+            success: true,
+            data: waterLog
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+};
 // All routes require authentication
 router.use(auth_1.protect);
+// @desc    Get water log statistics
+// @route   GET /api/water-logs/stats
+// @access  Private
+router.get('/stats', auth_1.protect, statsController_1.getDailyStats);
+// @desc    Get weekly statistics
+// @route   GET /api/water-logs/stats/weekly
+// @access  Private
+router.get('/stats/weekly', auth_1.protect, statsController_1.getWeeklyStats);
 // @desc    Get water logs for a user
 // @route   GET /api/water-logs
 // @access  Private
@@ -76,6 +116,7 @@ router.post('/', [
         .isInt({ min: 1, max: 2000 })
         .withMessage('Amount must be between 1 and 2000ml'),
     (0, express_validator_1.body)('date')
+        .optional()
         .isISO8601()
         .withMessage('Date must be in YYYY-MM-DD format'),
     (0, express_validator_1.body)('timestamp')
@@ -93,7 +134,8 @@ router.post('/', [
                 details: errors.array()
             });
         }
-        const { amount, date, timestamp } = req.body;
+        const { amount, date = new Date().toISOString().split('T')[0], timestamp } = req.body;
+        console.log(req.body);
         const userId = req.user._id;
         // Create water log
         const waterLog = await WaterLog_1.default.create({
@@ -111,41 +153,6 @@ router.post('/', [
         next(error);
     }
 });
-// @desc    Get weekly statistics
-// @route   GET /api/water-logs/weekly/stats
-// @access  Private
-router.get('/weekly/stats', async (req, res, next) => {
-    try {
-        const userId = req.user._id;
-        // Get date 6 days ago to get 7 days of data
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 6);
-        const startDateStr = startDate.toISOString().split('T')[0];
-        const endDateStr = endDate.toISOString().split('T')[0];
-        const weeklyStats = await WaterLog_1.default.getWeeklyStats(userId.toString(), startDateStr, endDateStr);
-        // Fill in missing dates with zero values
-        const filledStats = [];
-        for (let i = 6; i >= 0; i--) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
-            const existingStat = weeklyStats.find((stat) => stat.date === dateStr);
-            filledStats.push({
-                date: dateStr,
-                total: existingStat ? existingStat.total : 0,
-                count: existingStat ? existingStat.count : 0
-            });
-        }
-        res.json({
-            success: true,
-            data: filledStats
-        });
-    }
-    catch (error) {
-        next(error);
-    }
-});
 // @desc    Get single water log
 // @route   GET /api/water-logs/:id
 // @access  Private
@@ -153,36 +160,7 @@ router.get('/:id', [
     (0, express_validator_1.param)('id')
         .isMongoId()
         .withMessage('Invalid water log ID')
-], async (req, res, next) => {
-    try {
-        // Check for validation errors
-        const errors = (0, express_validator_1.validationResult)(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({
-                success: false,
-                error: 'Validation failed',
-                details: errors.array()
-            });
-        }
-        const waterLog = await WaterLog_1.default.findOne({
-            _id: req.params.id,
-            user: req.user._id
-        });
-        if (!waterLog) {
-            return res.status(404).json({
-                success: false,
-                error: 'Water log not found'
-            });
-        }
-        res.json({
-            success: true,
-            data: waterLog
-        });
-    }
-    catch (error) {
-        next(error);
-    }
-});
+], auth_1.protect, getWaterLogById);
 // @desc    Update water log
 // @route   PUT /api/water-logs/:id
 // @access  Private

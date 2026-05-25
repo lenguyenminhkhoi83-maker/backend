@@ -6,6 +6,7 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
+  role: 'user' | 'admin';
   dailyGoal: number;
   createdAt: Date;
   updatedAt: Date;
@@ -36,6 +37,12 @@ const UserSchema: Schema<IUser> = new Schema({
     minlength: [6, 'Password must be at least 6 characters'],
     select: false // Don't include password in queries by default
   },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user',
+    required: true
+  },
   dailyGoal: {
     type: Number,
     default: 2000,
@@ -57,9 +64,8 @@ UserSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
 
   try {
-    // Hash password with cost of 12
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
+    // Hash password with a cost factor of 10
+    this.password = await bcrypt.hash(this.password, 10);
     next();
   } catch (error: any) {
     next(error);

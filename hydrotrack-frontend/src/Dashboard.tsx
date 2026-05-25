@@ -1,10 +1,20 @@
 import React, { useEffect, useState } from 'react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from 'recharts';
 import { authHeaders } from './api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export default function Dashboard() {
   const [logs, setLogs] = useState<any[]>([]);
+  const [weeklyData, setWeeklyData] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [goal, setGoal] = useState(2000);
 
@@ -17,7 +27,7 @@ export default function Dashboard() {
         return;
       }
 
-      const res = await fetch(`${API_URL}/api/water-logs`, {
+      const res = await fetch(`${API_URL}/api/v1/water-logs`, {
         headers: authHeaders(),
       });
 
@@ -83,6 +93,35 @@ export default function Dashboard() {
     }
   };
 
+  const fetchWeeklyStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        logout();
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/api/v1/water-logs/stats/weekly`, {
+        headers: authHeaders(),
+      });
+
+      if (res.status === 401) {
+        logout();
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      setWeeklyData(data?.data?.days || []);
+    } catch (error) {
+      console.error('Failed to fetch weekly stats:', error);
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
 
@@ -93,12 +132,13 @@ export default function Dashboard() {
 
     fetchLogs();
     fetchGoal();
+    fetchWeeklyStats();
   }, []);
 
   const addWater = async (amount: number) => {
     const token = localStorage.getItem('token');
 
-    const res = await fetch(`${API_URL}/api/water-logs`, {
+    const res = await fetch(`${API_URL}/api/v1/water-logs`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -144,11 +184,20 @@ export default function Dashboard() {
           {total} / {goal} ml
         </h2>
 
-        <div className="w-full bg-gray-200 h-3 rounded mt-2">
-          <div
-            className="bg-blue-500 h-3 rounded"
-            style={{ width: `${progress}%` }}
-          />
+        <div className="mt-4">
+          <div className="w-full bg-gray-200 h-4 rounded-full overflow-hidden">
+            <div
+              className="bg-blue-500 h-full rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+              role="progressbar"
+              aria-valuenow={progress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </div>
+          <p className="text-sm text-gray-700 mt-2">
+            {Math.round(progress)}% of your daily goal
+          </p>
         </div>
       </div>
 
@@ -162,6 +211,29 @@ export default function Dashboard() {
             +{amt}ml
           </button>
         ))}
+      </div>
+
+      <div className="bg-white p-4 rounded-xl mb-4 shadow-sm">
+        <h3 className="font-semibold mb-3">Weekly Intake</h3>
+        <ResponsiveContainer width="100%" height={260}>
+          <LineChart
+            data={weeklyData}
+            margin={{ top: 10, right: 16, left: 0, bottom: 0 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+            <YAxis />
+            <Tooltip />
+            <Line
+              type="monotone"
+              dataKey="total"
+              stroke="#2563eb"
+              strokeWidth={2}
+              dot={{ r: 4 }}
+              activeDot={{ r: 6 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
       </div>
 
       <div>

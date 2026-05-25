@@ -7,37 +7,33 @@ const express_1 = __importDefault(require("express"));
 const express_validator_1 = require("express-validator");
 const User_1 = __importDefault(require("../models/User"));
 const auth_1 = require("../middleware/auth");
+const asyncHandler_1 = require("../middleware/asyncHandler");
 const router = express_1.default.Router();
 // All routes require authentication
 router.use(auth_1.protect);
 // @desc    Get user profile
 // @route   GET /api/profile
 // @access  Private
-router.get('/', async (req, res, next) => {
-    try {
-        const user = await User_1.default.findById(req.user._id);
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                error: 'User not found'
-            });
-        }
-        res.json({
-            success: true,
-            data: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                dailyGoal: user.dailyGoal,
-                createdAt: user.createdAt,
-                updatedAt: user.updatedAt
-            }
+router.get('/', (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    const user = await User_1.default.findById(req.user._id);
+    if (!user) {
+        return res.status(404).json({
+            success: false,
+            error: 'User not found'
         });
     }
-    catch (error) {
-        next(error);
-    }
-});
+    res.json({
+        success: true,
+        data: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            dailyGoal: user.dailyGoal,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt
+        }
+    });
+}));
 // @desc    Update user profile
 // @route   PUT /api/profile
 // @access  Private

@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User';
 import { protect } from '../middleware/auth';
+import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = express.Router();
 
@@ -11,32 +12,28 @@ router.use(protect);
 // @desc    Get user profile
 // @route   GET /api/profile
 // @access  Private
-router.get('/', async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user!._id);
+router.get('/', asyncHandler(async (req: Request, res: Response) => {
+  const user = await User.findById(req.user!._id);
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        dailyGoal: user.dailyGoal,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      }
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      error: 'User not found'
     });
-  } catch (error) {
-    next(error);
   }
-});
+
+  res.json({
+    success: true,
+    data: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      dailyGoal: user.dailyGoal,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    }
+  });
+}));
 
 // @desc    Update user profile
 // @route   PUT /api/profile

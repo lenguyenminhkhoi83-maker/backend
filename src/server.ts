@@ -9,6 +9,8 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJSDoc from 'swagger-jsdoc';
 
 import { connectDB } from './config/database';
 import { errorHandler } from './middleware/errorHandler';
@@ -25,6 +27,7 @@ import notificationsRoutes from './routes/notifications';
 
 // Create Express app
 const app = express();
+app.set('trust proxy', 1);
 
 // Connect to database
 connectDB();
@@ -63,12 +66,47 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Compression middleware
 app.use(compression());
 
+// Request ID middleware
+app.use(async (req, res, next) => {
+  const { v4: uuidv4 } = await import('uuid');
+  req.id = uuidv4();
+  res.setHeader('X-Request-Id', req.id);
+  next();
+});
+
+// Swagger setup
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'HydroTrack API',
+      version: '1.0.0',
+      description: 'API documentation for the HydroTrack backend'
+    },
+    servers: [
+      {
+        url: 'http://localhost:' + (process.env.PORT || 3000),
+        description: 'Local development server'
+      }
+    ]
+  },
+  apis: ['./src/routes/*.ts']
+};
+
+const swaggerSpec = swaggerJSDoc(swaggerOptions);
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 // Logging middleware
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 } else {
   app.use(morgan('combined'));
 }
+
+// Favicon handler
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
 
 // Root API endpoint
 app.get('/', (req, res) => {
@@ -86,8 +124,8 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/water-logs', waterLogRoutes);
+app.use(['/api/auth', '/api/v1/auth'], authRoutes);
+app.use(['/api/water-logs', '/api/v1/water-logs'], waterLogRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/sync', syncRoutes);
