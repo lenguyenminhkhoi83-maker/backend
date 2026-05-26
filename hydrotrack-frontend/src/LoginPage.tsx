@@ -4,5 +4,7 @@ import Login from './Login';
 export default function LoginPage() {
   const navigate = useNavigate();
 
-  return <Login onNavigate={(path) => navigate(path)} />;
+  return (
+    <Login onNavigate={navigate} />
+  );
 }
