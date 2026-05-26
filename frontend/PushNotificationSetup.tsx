@@ -9,82 +9,120 @@ import {
 } from './push-client';
 
 export const PushNotificationSetup: React.FC = () => {
-  const [status, setStatus] = useState('Idle');
-  const [subscriptionEndpoint, setSubscriptionEndpoint] = useState<string | null>(null);
+  const [status, setStatus] = useState<string>('Idle');
+  const [endpoint, setEndpoint] = useState<string | null>(null);
 
+  // ======================
+  // SUBSCRIBE
+  // ======================
   const handleSubscribe = async () => {
     try {
       setStatus('Requesting permission...');
+
       const permission = await requestNotificationPermission();
       if (permission !== 'granted') {
-        setStatus('Notification permission denied');
+        setStatus('Permission denied');
         return;
       }
 
-      setStatus('Registering service worker...');
+      setStatus('Subscribing...');
+
       const subscription = await subscribeUserToPush();
-      setSubscriptionEndpoint(subscription.endpoint);
+      if (!subscription) throw new Error('No subscription created');
 
-      setStatus('Saving subscription to server...');
-      const response = await sendSubscriptionToServer(subscription);
-      if (!response.ok) {
-        throw new Error('Failed to save subscription');
-      }
+      setEndpoint(subscription.endpoint);
 
-      setStatus('Subscribed to push notifications');
-    } catch (error) {
-      setStatus(`Subscription failed: ${error}`);
+      setStatus('Saving to server...');
+
+      const res = await sendSubscriptionToServer(subscription);
+      if (!res?.ok) throw new Error('Server save failed');
+
+      setStatus('Subscribed successfully');
+    } catch (err: any) {
+      console.error(err);
+      setStatus(`Subscribe failed`);
     }
   };
 
+  // ======================
+  // UNSUBSCRIBE
+  // ======================
   const handleUnsubscribe = async () => {
     try {
       setStatus('Unsubscribing...');
+
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
+
       if (!subscription) {
-        setStatus('No active subscription found');
+        setStatus('No subscription found');
         return;
       }
 
       await unsubscribeUserFromPush();
       await removeSubscriptionFromServer(subscription.endpoint);
-      setSubscriptionEndpoint(null);
-      setStatus('Unsubscribed from push notifications');
-    } catch (error) {
-      setStatus(`Unsubscribe failed: ${error}`);
+
+      setEndpoint(null);
+      setStatus('Unsubscribed');
+    } catch (err) {
+      console.error(err);
+      setStatus('Unsubscribe failed');
     }
   };
 
-  const handleSendTest = async () => {
+  // ======================
+  // TEST NOTIFICATION
+  // ======================
+  const handleTest = async () => {
     try {
-      setStatus('Sending test notification...');
-      const response = await sendPushTestNotification(
-        'HydroTrack Reminder',
-        'This is your test hydration reminder!'
+      setStatus('Sending test...');
+
+      const res = await sendPushTestNotification(
+        '💧 HydroTrack',
+        'Time to drink water!'
       );
-      if (!response.ok) {
-        throw new Error('Failed to send test notification');
-      }
-      setStatus('Test notification sent');
-    } catch (error) {
-      setStatus(`Test send failed: ${error}`);
+
+      if (!res?.ok) throw new Error('Test failed');
+
+      setStatus('Test sent');
+    } catch (err) {
+      console.error(err);
+      setStatus('Test failed');
     }
   };
 
+  // ======================
+  // UI
+  // ======================
   return (
     <div className="push-setup-card">
       <h3>Push Notifications</h3>
+
       <p>Status: {status}</p>
+
       <div className="push-actions">
-        <button onClick={handleSubscribe}>Subscribe</button>
-        <button onClick={handleUnsubscribe} disabled={!subscriptionEndpoint}>Unsubscribe</button>
-        <button onClick={handleSendTest}>Send Test Notification</button>
+        <button onClick={handleSubscribe}>
+          Subscribe
+        </button>
+
+        <button
+          onClick={handleUnsubscribe}
+          disabled={!endpoint}
+        >
+          Unsubscribe
+        </button>
+
+        <button onClick={handleTest}>
+          Test Notification
+        </button>
       </div>
-      {subscriptionEndpoint && (
+
+      {endpoint && (
         <div className="subscription-info">
-          <strong>Endpoint:</strong>
-          <p>{subscriptionEndpoint}</p>
+          <strong>Endpoint</strong>
+          <p style={{ fontSize: 12, wordBreak: 'break-all' }}>
+            {endpoint}
+          </p>
         </div>
       )}
     </div>
