@@ -45,9 +45,8 @@ export default function Dashboard() {
 
       const data = await res.json();
 
-      const logsData = data?.data || [];
-
-      setLogs(logsData);
+      const logs = data?.data || [];
+      setLogs(logs);
 
       const today = new Date().toDateString();
 
