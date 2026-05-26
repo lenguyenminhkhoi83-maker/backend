@@ -5,7 +5,6 @@ const API = axios.create({
   withCredentials: false,
 });
 
-// 🔥 AUTO ATTACH TOKEN
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
 
@@ -16,7 +15,6 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-// 🔥 AUTO HANDLE 401 (QUAN TRỌNG)
 API.interceptors.response.use(
   (res) => res,
   (err) => {
