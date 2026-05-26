@@ -13,32 +13,38 @@ const Login: React.FC<LoginProps> = ({ onNavigate }) => {
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError(null);
-    setLoading(true);
+  event.preventDefault();
 
-    try {
-      const res = await API.post('/auth/login', {
-        email,
-        password,
-      });
+  if (loading) return;
 
-      localStorage.setItem("token", res.data.data.token);
-      onNavigate('/dashboard');
+  setError(null);
+  setLoading(true);
 
-    } catch (err) {
-      console.error(err);
+  try {
+    const res = await API.post('/auth/login', {
+      email,
+      password,
+    });
 
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.error || err.message);
-      } else {
-        setError('Login error');
-      }
+    const token = res.data?.data?.token;
 
-    } finally {
-      setLoading(false);
+    if (!token) {
+      throw new Error('Token not found in response');
     }
-  };
+
+    localStorage.setItem('token', token);
+
+    onNavigate('/dashboard');
+  } catch (err: any) {
+    setError(
+      err?.response?.data?.error ||
+      err?.message ||
+      'Login failed'
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="login-card">

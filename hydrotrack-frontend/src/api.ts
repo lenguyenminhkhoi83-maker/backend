@@ -1,15 +1,11 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: import.meta.env.VITE_API_URL,
+  withCredentials: false,
 });
 
-/**
- * Attach token automatically
- */
+// 🔥 AUTO ATTACH TOKEN
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
 
@@ -20,18 +16,16 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-/**
- * Auto handle auth errors
- */
+// 🔥 AUTO HANDLE 401 (QUAN TRỌNG)
 API.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
 
-    return Promise.reject(error);
+    return Promise.reject(err);
   }
 );
 
