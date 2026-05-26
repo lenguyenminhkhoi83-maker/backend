@@ -5,7 +5,6 @@ dotenv.config();
 
 import express from 'express';
 import cors from 'cors';
-import { v4 as uuidv4 } from 'uuid';
 //import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
@@ -68,12 +67,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(compression());
 
 // Request ID middleware
-app.use(async (req, res, next) => {
-  const { v4: uuidv4 } = await import('uuid');
-
-  req.id = uuidv4();
+app.use((req, res, next) => {
+  req.id = crypto.randomUUID();
   res.setHeader('X-Request-Id', req.id);
-
   next();
 });
 
