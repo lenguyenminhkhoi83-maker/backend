@@ -50,15 +50,11 @@ export default function Dashboard() {
 
       const today = new Date().toDateString();
 
-      const todayLogs = logsData.filter(
-        (log: any) =>
-          new Date(log.createdAt || log.timestamp).toDateString() === today
-      );
+      const totalToday = logs
+        .filter((l: any) => l.date === today)
+        .reduce((sum: number, l: any) => sum + (l.amount || 0), 0);
 
-      const sum = todayLogs.reduce(
-        (acc: number, log: any) => acc + (log.amount || 0),
-        0
-      );
+      setTotal(totalToday);
 
       setTotal(sum);
     } catch (error) {
