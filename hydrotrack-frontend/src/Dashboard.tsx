@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   LineChart,
   Line,
@@ -9,10 +10,12 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { authHeaders } from './api';
+import { isLoggedIn } from './auth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [logs, setLogs] = useState<any[]>([]);
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
@@ -123,10 +126,8 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      window.location.href = '/login';
+    if (!isLoggedIn()) {
+      navigate('/login');
       return;
     }
 
