@@ -156,6 +156,14 @@ const server = app.listen(PORT, () => {
   console.log(`🔗 CORS Origin: ${process.env.CORS_ORIGIN}`);
 });
 
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION:', reason);
+});
+
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');

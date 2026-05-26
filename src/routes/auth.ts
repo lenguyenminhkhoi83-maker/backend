@@ -83,6 +83,9 @@ router.post('/login', [
     .notEmpty()
     .withMessage('Password is required')
 ], async (req: Request, res: Response, next: NextFunction) => {
+  console.log('LOGIN HIT');
+  console.log(req.body);
+
   try {
     // Check for validation errors
     const errors = validationResult(req);
@@ -92,7 +95,6 @@ router.post('/login', [
         error: 'Validation failed',
         details: errors.array()
       });
-    }
 
     const { email, password } = req.body;
 
