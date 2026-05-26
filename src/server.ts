@@ -16,6 +16,14 @@ import { connectDB } from './config/database';
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
 
+declare global {
+  namespace Express {
+    interface Request {
+      id?: string;
+    }
+  }
+}
+
 // Import routes
 import authRoutes from './routes/auth';
 import waterLogRoutes from './routes/waterLogs';
