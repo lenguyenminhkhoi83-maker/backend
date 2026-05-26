@@ -6,8 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 const express_1 = __importDefault(require("express"));
-const cors_1 = __importDefault(require("cors"));
-const helmet_1 = __importDefault(require("helmet"));
+//import helmet from 'helmet';
 const compression_1 = __importDefault(require("compression"));
 const morgan_1 = __importDefault(require("morgan"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
@@ -26,20 +25,22 @@ const push_1 = __importDefault(require("./routes/push"));
 const notifications_1 = __importDefault(require("./routes/notifications"));
 // Create Express app
 const app = (0, express_1.default)();
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
 app.set('trust proxy', 1);
 // Connect to database
 (0, database_1.connectDB)();
 // Security middleware
-app.use((0, helmet_1.default)({
-    crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
-// CORS configuration
-app.use((0, cors_1.default)({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
+//app.use(helmet({
+//crossOriginResourcePolicy: { policy: "cross-origin" }
+//}));
 // Rate limiting
 const limiter = (0, express_rate_limit_1.default)({
     windowMs: (parseInt(process.env.RATE_LIMIT_WINDOW || '15')) * 60 * 1000,
@@ -126,6 +127,12 @@ const server = app.listen(PORT, () => {
     console.log(`🚀 HydroTrack API server running on port ${PORT}`);
     console.log(`📱 Environment: ${process.env.NODE_ENV}`);
     console.log(`🔗 CORS Origin: ${process.env.CORS_ORIGIN}`);
+});
+process.on('uncaughtException', (err) => {
+    console.error('UNCAUGHT EXCEPTION:', err);
+});
+process.on('unhandledRejection', (reason) => {
+    console.error('UNHANDLED REJECTION:', reason);
 });
 // Graceful shutdown
 process.on('SIGTERM', () => {

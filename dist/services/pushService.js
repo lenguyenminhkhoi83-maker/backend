@@ -10,15 +10,22 @@ const PushSubscription_1 = __importDefault(require("../models/PushSubscription")
 class PushService {
     constructor() {
         this.pushEnabled = false;
-        const publicKey = process.env.VAPID_PUBLIC_KEY;
-        const privateKey = process.env.VAPID_PRIVATE_KEY;
-        const subject = process.env.VAPID_SUBJECT || 'mailto:admin@hydrotrack.com';
-        if (!publicKey || !privateKey) {
-            console.warn('VAPID keys are not configured. Push notifications are disabled.');
-            return;
+        try {
+            const publicKey = process.env.VAPID_PUBLIC_KEY;
+            const privateKey = process.env.VAPID_PRIVATE_KEY;
+            const subject = process.env.VAPID_SUBJECT || 'mailto:admin@hydrotrack.com';
+            if (!publicKey || !privateKey) {
+                console.warn('VAPID keys are not configured. Push notifications are disabled.');
+                return;
+            }
+            web_push_1.default.setVapidDetails(subject, publicKey, privateKey);
+            this.pushEnabled = true;
+            console.log('✅ Push notifications enabled');
         }
-        web_push_1.default.setVapidDetails(subject, publicKey, privateKey);
-        this.pushEnabled = true;
+        catch (error) {
+            console.warn('⚠️ Invalid VAPID keys. Push notifications disabled.');
+            this.pushEnabled = false;
+        }
     }
     async saveSubscription(subscription, userId) {
         const existing = await PushSubscription_1.default.findOne({ endpoint: subscription.endpoint });

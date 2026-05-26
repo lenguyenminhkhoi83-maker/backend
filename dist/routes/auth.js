@@ -81,6 +81,8 @@ router.post('/login', [
         .notEmpty()
         .withMessage('Password is required')
 ], async (req, res, next) => {
+    console.log('LOGIN HIT');
+    console.log(req.body);
     try {
         // Check for validation errors
         const errors = (0, express_validator_1.validationResult)(req);
