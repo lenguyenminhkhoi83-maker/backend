@@ -36,10 +36,8 @@ import notificationsRoutes from './routes/notifications';
 // Create Express app
 const app = express();
 
-const allowedOrigins = [
+const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || [
   'http://localhost:5173',
-  'https://hydrotrack-eosin.vercel.app',
-  'https://hydrotrack-n2ke4a347-lenguyenminhkhoi83-makers-projects.vercel.app'
 ];
 
 app.use(cors({
