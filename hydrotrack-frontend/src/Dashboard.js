@@ -1,122 +1,115 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { authHeaders } from './api';
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import API from './api';
+import { isLoggedIn } from './auth';
 export default function Dashboard() {
+    const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
+    const [adding, setAdding] = useState(false);
     const [logs, setLogs] = useState([]);
     const [weeklyData, setWeeklyData] = useState([]);
     const [total, setTotal] = useState(0);
     const [goal, setGoal] = useState(2000);
-    const fetchLogs = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                logout();
-                return;
-            }
-            const res = await fetch(`${API_URL}/api/v1/water-logs`, {
-                headers: authHeaders(),
-            });
-            if (res.status === 401) {
-                logout();
-                return;
-            }
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
-            }
-            const data = await res.json();
-            const logsData = data?.data || [];
-            setLogs(logsData);
-            const today = new Date().toDateString();
-            const todayLogs = logsData.filter((log) => new Date(log.createdAt || log.timestamp).toDateString() === today);
-            const sum = todayLogs.reduce((acc, log) => acc + (log.amount || 0), 0);
-            setTotal(sum);
-        }
-        catch (error) {
-            console.error('Failed to fetch logs:', error);
-        }
-    };
-    const fetchGoal = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                logout();
-                return;
-            }
-            const res = await fetch(`${API_URL}/api/settings`, {
-                headers: authHeaders(),
-            });
-            if (res.status === 401) {
-                logout();
-                return;
-            }
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
-            }
-            const data = await res.json();
-            setGoal(data?.data?.dailyGoal || 2000);
-        }
-        catch (error) {
-            console.error('Failed to fetch goal:', error);
-        }
-    };
-    const fetchWeeklyStats = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                logout();
-                return;
-            }
-            const res = await fetch(`${API_URL}/api/v1/water-logs/stats/weekly`, {
-                headers: authHeaders(),
-            });
-            if (res.status === 401) {
-                logout();
-                return;
-            }
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
-            }
-            const data = await res.json();
-            setWeeklyData(data?.data?.days || []);
-        }
-        catch (error) {
-            console.error('Failed to fetch weekly stats:', error);
-        }
-    };
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            window.location.href = '/login';
-            return;
-        }
-        fetchLogs();
-        fetchGoal();
-        fetchWeeklyStats();
-    }, []);
-    const addWater = async (amount) => {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${API_URL}/api/v1/water-logs`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ amount }),
-        });
-        const data = await res.json();
-        console.log(data);
-        if (!res.ok) {
-            console.error(data);
-            return;
-        }
-        fetchLogs();
-    };
+    // ======================
+    // HELPERS
+    // ======================
+    const getDate = (d) => new Date(d).toISOString().split('T')[0];
     const logout = () => {
         localStorage.removeItem('token');
         window.location.href = '/login';
     };
+    // ======================
+    // FETCH LOGS
+    // ======================
+    const fetchLogs = async () => {
+        setLoading(true);
+        try {
+            const res = await API.get('/api/v1/water-logs');
+            const fetchedLogs = res.data?.data || [];
+            setLogs(fetchedLogs);
+            const today = new Date().toISOString().split('T')[0];
+            const totalToday = fetchedLogs
+                .filter((l) => getDate(l.date || l.createdAt) === today)
+                .reduce((sum, l) => sum + (l.amount || 0), 0);
+            setTotal(totalToday);
+        }
+        catch (err) {
+            console.error('fetchLogs error:', err);
+        }
+        finally {
+            setLoading(false);
+        }
+    };
+    // ======================
+    // FETCH GOAL
+    // ======================
+    const fetchGoal = async () => {
+        try {
+            const res = await API.get('/api/settings');
+            setGoal(res.data?.data?.dailyGoal || 2000);
+        }
+        catch (err) {
+            console.error('fetchGoal error:', err);
+        }
+    };
+    // ======================
+    // FETCH WEEKLY
+    // ======================
+    const fetchWeeklyStats = async () => {
+        try {
+            const res = await API.get('/api/v1/water-logs/stats/weekly');
+            setWeeklyData(Array.isArray(res.data?.data?.days)
+                ? res.data.data.days
+                : []);
+        }
+        catch (err) {
+            console.error('fetchWeeklyStats error:', err);
+        }
+    };
+    // ======================
+    // INIT
+    // ======================
+    useEffect(() => {
+        if (!isLoggedIn()) {
+            navigate('/login');
+            return;
+        }
+        const load = async () => {
+            await Promise.all([
+                fetchLogs(),
+                fetchGoal(),
+                fetchWeeklyStats()
+            ]);
+        };
+        load();
+    }, [navigate]);
+    // ======================
+    // ADD WATER
+    // ======================
+    const addWater = async (amount) => {
+        setAdding(true);
+        try {
+            await API.post('/api/v1/water-logs', { amount });
+            await fetchLogs();
+        }
+        catch (err) {
+            console.error('addWater error:', err);
+        }
+        finally {
+            setAdding(false);
+        }
+    };
+    // ======================
+    // UI STATE
+    // ======================
     const progress = Math.min((total / goal) * 100, 100);
-    return (_jsxs("div", { className: "p-6 max-w-md mx-auto", children: [_jsxs("div", { className: "flex items-center justify-between mb-4", children: [_jsx("h1", { className: "text-2xl font-bold", children: "\uD83D\uDCA7 Dashboard" }), _jsx("button", { onClick: logout, className: "bg-red-500 text-white py-2 px-4 rounded", children: "Logout" })] }), _jsxs("div", { className: "bg-blue-100 p-4 rounded-xl mb-4", children: [_jsx("p", { children: "Today's intake" }), _jsxs("h2", { className: "text-3xl font-bold", children: [total, " / ", goal, " ml"] }), _jsxs("div", { className: "mt-4", children: [_jsx("div", { className: "w-full bg-gray-200 h-4 rounded-full overflow-hidden", children: _jsx("div", { className: "bg-blue-500 h-full rounded-full transition-all duration-300", style: { width: `${progress}%` }, role: "progressbar", "aria-valuenow": progress, "aria-valuemin": 0, "aria-valuemax": 100 }) }), _jsxs("p", { className: "text-sm text-gray-700 mt-2", children: [Math.round(progress), "% of your daily goal"] })] })] }), _jsx("div", { className: "grid grid-cols-3 gap-2 mb-4", children: [250, 500, 750].map((amt) => (_jsxs("button", { onClick: () => addWater(amt), className: "bg-blue-500 text-white py-2 rounded", children: ["+", amt, "ml"] }, amt))) }), _jsxs("div", { className: "bg-white p-4 rounded-xl mb-4 shadow-sm", children: [_jsx("h3", { className: "font-semibold mb-3", children: "Weekly Intake" }), _jsx(ResponsiveContainer, { width: "100%", height: 260, children: _jsxs(LineChart, { data: weeklyData, margin: { top: 10, right: 16, left: 0, bottom: 0 }, children: [_jsx(CartesianGrid, { strokeDasharray: "3 3" }), _jsx(XAxis, { dataKey: "date", tick: { fontSize: 12 } }), _jsx(YAxis, {}), _jsx(Tooltip, {}), _jsx(Line, { type: "monotone", dataKey: "total", stroke: "#2563eb", strokeWidth: 2, dot: { r: 4 }, activeDot: { r: 6 } })] }) })] }), _jsxs("div", { children: [_jsx("h3", { className: "font-semibold mb-2", children: "Recent Logs" }), logs.slice(0, 5).map((log, i) => (_jsxs("div", { className: "border p-2 rounded mb-2", children: [log.amount, " ml \u2022 ", new Date(log.createdAt || log.timestamp).toLocaleTimeString()] }, i)))] })] }));
+    if (loading) {
+        return (_jsx("div", { className: "p-6 text-center", children: _jsx("p", { children: "Loading dashboard..." }) }));
+    }
+    // ======================
+    // UI
+    // ======================
+    return (_jsxs("div", { className: "p-6 max-w-md mx-auto", children: [_jsxs("div", { className: "flex items-center justify-between mb-4", children: [_jsx("h1", { className: "text-2xl font-bold", children: "\uD83D\uDCA7 Dashboard" }), _jsx("button", { onClick: logout, className: "bg-red-500 text-white py-2 px-4 rounded", children: "Logout" })] }), _jsxs("div", { className: "bg-blue-100 p-4 rounded-xl mb-4", children: [_jsx("p", { children: "Today's intake" }), _jsxs("h2", { className: "text-3xl font-bold", children: [total, " / ", goal, " ml"] }), _jsxs("div", { className: "mt-4", children: [_jsx("div", { className: "w-full bg-gray-200 h-4 rounded-full overflow-hidden", children: _jsx("div", { className: "bg-blue-500 h-full rounded-full transition-all duration-300", style: { width: `${progress}%` } }) }), _jsxs("p", { className: "text-sm text-gray-700 mt-2", children: [Math.round(progress), "% of your daily goal"] })] })] }), _jsx("div", { className: "grid grid-cols-3 gap-2 mb-4", children: [250, 500, 750].map((amt) => (_jsxs("button", { onClick: () => addWater(amt), disabled: adding, className: "bg-blue-500 text-white py-2 rounded disabled:opacity-50", children: ["+", amt, "ml"] }, amt))) }), _jsxs("div", { className: "bg-white p-4 rounded-xl mb-4 shadow-sm", children: [_jsx("h3", { className: "font-semibold mb-3", children: "Weekly Intake" }), _jsx(ResponsiveContainer, { width: "100%", height: 260, children: _jsxs(LineChart, { data: weeklyData, children: [_jsx(CartesianGrid, { strokeDasharray: "3 3" }), _jsx(XAxis, { dataKey: "date" }), _jsx(YAxis, {}), _jsx(Tooltip, {}), _jsx(Line, { type: "monotone", dataKey: "total", stroke: "#2563eb", strokeWidth: 2 })] }) })] }), _jsxs("div", { children: [_jsx("h3", { className: "font-semibold mb-2", children: "Recent Logs" }), logs.length === 0 && (_jsx("p", { className: "text-gray-500", children: "No logs yet" })), logs.slice(0, 5).map((log, i) => (_jsxs("div", { className: "border p-2 rounded mb-2", children: [log.amount, " ml \u2022", ' ', new Date(log.createdAt || log.timestamp).toLocaleTimeString()] }, i)))] })] }));
 }
