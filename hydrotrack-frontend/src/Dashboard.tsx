@@ -10,10 +10,8 @@ import {
   ResponsiveContainer
 } from 'recharts';
 
-import { authHeaders } from './api';
+import API from './api';
 import { isLoggedIn } from './auth';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -29,7 +27,7 @@ export default function Dashboard() {
   // ======================
   // HELPERS
   // ======================
-  const formatDate = (d: any) =>
+  const getDate = (d: any) =>
     new Date(d).toISOString().split('T')[0];
 
   const logout = () => {
@@ -44,28 +42,19 @@ export default function Dashboard() {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) return logout();
+      const res = await API.get('/api/v1/water-logs');
 
-      const res = await fetch(`${API_URL}/api/v1/water-logs`, {
-        headers: authHeaders(),
-      });
-
-      if (res.status === 401) return logout();
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-      const data = await res.json();
-      const fetchedLogs = data?.data || [];
-
+      const fetchedLogs = res.data?.data || [];
       setLogs(fetchedLogs);
 
-      const today = formatDate(new Date());
+      const today = new Date().toISOString().split('T')[0];
 
       const totalToday = fetchedLogs
-        .filter((l: any) => formatDate(l.date || l.createdAt) === today)
+        .filter((l: any) => getDate(l.date || l.createdAt) === today)
         .reduce((sum: number, l: any) => sum + (l.amount || 0), 0);
 
       setTotal(totalToday);
+
     } catch (err) {
       console.error('fetchLogs error:', err);
     } finally {
@@ -78,14 +67,8 @@ export default function Dashboard() {
   // ======================
   const fetchGoal = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/settings`, {
-        headers: authHeaders(),
-      });
-
-      if (!res.ok) throw new Error();
-
-      const data = await res.json();
-      setGoal(data?.data?.dailyGoal || 2000);
+      const res = await API.get('/api/settings');
+      setGoal(res.data?.data?.dailyGoal || 2000);
     } catch (err) {
       console.error('fetchGoal error:', err);
     }
@@ -96,17 +79,11 @@ export default function Dashboard() {
   // ======================
   const fetchWeeklyStats = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/v1/water-logs/stats/weekly`, {
-        headers: authHeaders(),
-      });
-
-      if (!res.ok) throw new Error();
-
-      const data = await res.json();
+      const res = await API.get('/api/v1/water-logs/stats/weekly');
 
       setWeeklyData(
-        Array.isArray(data?.data?.days)
-          ? data.data.days
+        Array.isArray(res.data?.data?.days)
+          ? res.data.data.days
           : []
       );
     } catch (err) {
@@ -141,20 +118,7 @@ export default function Dashboard() {
     setAdding(true);
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) return logout();
-
-      const res = await fetch(`${API_URL}/api/v1/water-logs`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ amount }),
-      });
-
-      if (!res.ok) throw new Error();
-
+      await API.post('/api/v1/water-logs', { amount });
       await fetchLogs();
     } catch (err) {
       console.error('addWater error:', err);
@@ -181,6 +145,7 @@ export default function Dashboard() {
   // ======================
   return (
     <div className="p-6 max-w-md mx-auto">
+
       {/* HEADER */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">💧 Dashboard</h1>
