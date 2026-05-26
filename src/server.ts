@@ -141,7 +141,7 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
-app.use(['/api/auth', '/api/v1/auth'], authRoutes);
+app.use('/api/v1/auth', authRoutes);
 app.use(['/api/water-logs', '/api/v1/water-logs'], waterLogRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/profile', profileRoutes);
